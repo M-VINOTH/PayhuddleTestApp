@@ -17,6 +17,7 @@ import {
     AppSpinner,
     showAppToast,
 } from "../../component/AppBase";
+import NfcManager, {NfcEvents} from 'react-native-nfc-manager';
 
 
 import IMAGES from "../../utility/images";
@@ -32,12 +33,50 @@ class TAPCARD extends Component {
     };
 
     componentDidMount(){
-        
-        setTimeout(()=> {
-            this.setState({ buttonLoading: true });
-           this.onReceivedCardReader()
-        }, 2000)
+        this._test()
+        NfcManager.start();
+        NfcManager.setEventListener(NfcEvents.DiscoverTag, tag => {
+          console.warn('tag', tag);
+          NfcManager.setAlertMessageIOS('I got your tag!');
+          NfcManager.unregisterTagEvent().catch(() => 0);
+        });
+
+        // setTimeout(()=> {
+        //     this.setState({ buttonLoading: true });
+        //    this.onReceivedCardReader()
+        // }, 2000)
     }
+
+    componentWillUnmount() {
+        NfcManager.setEventListener(NfcEvents.DiscoverTag, null);
+        NfcManager.unregisterTagEvent().catch(() => 0);
+        this._cancel()
+      }
+    
+
+      _cancel = () => {
+        NfcManager.unregisterTagEvent().catch(() => 0);
+      }
+    
+      _test = async () => {
+        try {
+          await NfcManager.registerTagEvent();
+        } catch (ex) {
+          console.warn('ex', ex);
+          NfcManager.unregisterTagEvent().catch(() => 0);
+        }
+
+        try {
+            let tech = Platform.OS === 'ios' ? NfcTech.MifareIOS : NfcTech.NfcA;
+            let resp = await NfcManager.requestTechnology(tech, {
+                alertMessage: "Ready for magic"
+            });
+            let cmd = Platform.OS === 'ios' ? NfcManager.sendMifareCommandIOS : NfcManager.transceive;
+        }catch(e){
+            NfcManager.setAlertMessageIOS('Failure');
+        }
+    
+      }
 
     render() {
         return (
